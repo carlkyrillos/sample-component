@@ -37,20 +37,28 @@ type HelloWorldReconciler struct {
 // +kubebuilder:rbac:groups=helloworld.opendatahub.io,resources=helloworlds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=helloworld.opendatahub.io,resources=helloworlds/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the HelloWorld object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *HelloWorldReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	// Create a logger with the HelloWorld CR's name to keep track
+	logger := log.FromContext(ctx).WithName(req.Name)
 
-	// TODO(user): your logic here
+	// Capture the name and namespace of the incoming Request object
+	ref := client.ObjectKey{
+		Namespace: req.Namespace,
+		Name:      req.Name,
+	}
+	hw := &helloworldv1.HelloWorld{}
 
+	// Get the HelloWorld CR
+	err := r.Client.Get(ctx, ref, hw)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Extract the message from the HelloWorld CR
+	message := hw.Spec.Message
+
+	// Print the message to the logs
+	logger.Info(message)
 	return ctrl.Result{}, nil
 }
 
