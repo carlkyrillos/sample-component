@@ -12,7 +12,7 @@ spec:
     listKind: HelloWorldList
     plural: helloworlds
     singular: helloworld
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1
     schema:

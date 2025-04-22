@@ -40,7 +40,6 @@ type HelloWorldStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
 
 // HelloWorld is the Schema for the helloworlds API.
 type HelloWorld struct {
