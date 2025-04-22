@@ -8,10 +8,15 @@ rules:
   - ""
   resources:
   - configmaps
+  - services
   verbs:
-  - get
-  - list
-  - watch
+  - create
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
 - apiGroups:
   - helloworld.opendatahub.io
   resources:
@@ -38,3 +43,9 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - create
