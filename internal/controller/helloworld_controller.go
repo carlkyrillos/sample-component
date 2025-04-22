@@ -18,13 +18,27 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	helloworldv1 "github.com/opendatahub-io/sample-component/api/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+)
 
-	helloworldv1 "github.com/opendatahub-io/sample-component/api/v1"
+const (
+	defaultRequeueInterval   = 10 * time.Second
+	configurationIntervalKey = "interval"
+)
+
+// HelloWorld Labels
+const (
+	SampleComponentPrefix = "sample-component.opendatahub.io"
+	SampleComponentPartOf = SampleComponentPrefix + "/part-of"
+	True                  = "true"
 )
 
 // HelloWorldReconciler reconciles a HelloWorld object
@@ -36,6 +50,8 @@ type HelloWorldReconciler struct {
 // +kubebuilder:rbac:groups=helloworld.opendatahub.io,resources=helloworlds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=helloworld.opendatahub.io,resources=helloworlds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=helloworld.opendatahub.io,resources=helloworlds/finalizers,verbs=update
+
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
 func (r *HelloWorldReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Create a logger with the HelloWorld CR's name to keep track
@@ -59,7 +75,20 @@ func (r *HelloWorldReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Print the message to the logs
 	logger.Info(message)
-	return ctrl.Result{}, nil
+
+	// Get the configuration ConfigMap
+	cm, err := r.getConfigurationConfigMap(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Parse the refreshInterval from the ConfigMap
+	interval, err := parseIntervalFromConfigMap(cm)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{RequeueAfter: interval}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -68,4 +97,44 @@ func (r *HelloWorldReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&helloworldv1.HelloWorld{}).
 		Named("helloworld").
 		Complete(r)
+}
+
+// getConfigurationConfigMap Gets the configuration ConfigMap by label
+func (r *HelloWorldReconciler) getConfigurationConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
+	cmList := &corev1.ConfigMapList{}
+
+	opts := []client.ListOption{
+		client.MatchingLabels(map[string]string{
+			SampleComponentPartOf: True,
+		}),
+	}
+	err := r.Client.List(ctx, cmList, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(cmList.Items) {
+	case 1:
+		// Exactly 1 ConfigMap was found so return it
+		return &cmList.Items[0], nil
+	case 0:
+		// No ConfigMaps were found so return nil but don't error
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("expected 1 configuration ConfigMap, got %d", len(cmList.Items))
+	}
+}
+
+// parseIntervalFromConfigMap returns the parsed time interval if it exists and is valid
+// A default value is returned if no interval exists
+func parseIntervalFromConfigMap(cm *corev1.ConfigMap) (time.Duration, error) {
+	if stringInterval, exists := cm.Data[configurationIntervalKey]; exists {
+		duration, err := time.ParseDuration(stringInterval)
+		if err != nil {
+			return time.Duration(0), fmt.Errorf("unable to parse interval from configmap: %w", err)
+		}
+		return duration, nil
+	}
+
+	return defaultRequeueInterval, nil
 }
