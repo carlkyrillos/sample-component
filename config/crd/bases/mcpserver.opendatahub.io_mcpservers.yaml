@@ -43,6 +43,8 @@ spec:
                 description: Image is an example field of MCPServer. Edit mcpserver_types.go
                   to remove/update
                 type: string
+            required:
+            - image
             type: object
           status:
             description: MCPServerStatus defines the observed state of MCPServer.

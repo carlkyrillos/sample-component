@@ -28,6 +28,8 @@ type MCPServerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// +required
+	// +kubebuilder:validation:Required
 	// Image is an example field of MCPServer. Edit mcpserver_types.go to remove/update
 	Image string `json:"image,omitempty"`
 }
