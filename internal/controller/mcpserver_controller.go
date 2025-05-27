@@ -38,10 +38,12 @@ type MCPServerReconciler struct {
 // +kubebuilder:rbac:groups=mcpserver.opendatahub.io,resources=mcpservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=mcpserver.opendatahub.io,resources=mcpservers/finalizers,verbs=update
 
+// +kubebuilder:rbac:groups="",resources=services,verbs=create
+// +kubebuilder:rbac:groups="apps",resources=deployments,verbs=create
+// +kubebuilder:rbac:groups="route.openshift.io",resources=routes,verbs=create
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Create a logger with the MCPServer CR's name to keep track
 	logger := log.FromContext(ctx).WithName(req.Name)
@@ -61,7 +63,26 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	logger.Info(fmt.Sprintf("MCPServer %s's image is %s", mcpServer.Name, mcpServer.Spec.Image))
+	// Create Deployment
+	err = reconcileMCPServerDeployment(ctx, r.Client, mcpServer)
+	if err != nil {
+		logger.Error(err, "Failed to reconcile MCPServer Deployment")
+		return ctrl.Result{}, err
+	}
+
+	// Create Service
+	err = reconcileMCPServerService(ctx, r.Client, mcpServer)
+	if err != nil {
+		logger.Error(err, "Failed to reconcile MCPServer Service")
+		return ctrl.Result{}, err
+	}
+
+	// Create Route
+	err = reconcileMCPServerRoute(ctx, r.Client, mcpServer)
+	if err != nil {
+		logger.Error(err, "Failed to reconcile MCPServer Route")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
