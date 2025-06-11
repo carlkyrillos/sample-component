@@ -145,12 +145,13 @@ func reconcileMCPServerRoute(ctx context.Context, cli client.Client, mcpServer *
 			},
 		},
 		Spec: routev1.RouteSpec{
-			Port: &routev1.RoutePort{
-				TargetPort: intstr.FromInt32(8000),
-			},
+			Path: "/sse",
 			To: routev1.RouteTargetReference{
 				Kind: "Service",
 				Name: mcpServer.Name,
+			},
+			Port: &routev1.RoutePort{
+				TargetPort: intstr.FromInt32(8000),
 			},
 		},
 	}
